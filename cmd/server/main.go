@@ -15,19 +15,19 @@ import (
 	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"
 
-	"boilerplate/internal/db"
-	"boilerplate/internal/domain"
-	"boilerplate/internal/graphql"
-	"boilerplate/internal/rest"
-	"boilerplate/internal/repository/pocketbase"
-	"boilerplate/internal/repository/sql_adapter"
-	usecase_auth "boilerplate/internal/usecase/auth"
-	"boilerplate/pkg/config"
+	"boilerplate/services/auth/domain"
+	"boilerplate/services/auth/delivery/graphql"
+	"boilerplate/services/auth/delivery/rest"
+	"boilerplate/services/auth/usecase"
+	"boilerplate/shared/adapter/pocketbase"
+	sqliteAdapter "boilerplate/shared/adapter/sqlite_adapter"
+	"boilerplate/shared/config"
+	"boilerplate/shared/db"
 )
 
 func runMigrations(dbConn *sql.DB, dbType string, connString string) {
 	log.Println("Running database migrations...")
-	
+
 	var driver database.Driver
 	var err error
 
@@ -53,13 +53,11 @@ func runMigrations(dbConn *sql.DB, dbType string, connString string) {
 }
 
 func main() {
-	// 1. Load Primary Config (config.json -> env vars)
 	cfg := config.LoadConfig()
 	log.Printf("Booting with DB_TYPE: %s", cfg.DBType)
 
 	var authRepo domain.AuthRepository
 
-	// 2. Conditional Dependency Injection
 	switch cfg.DBType {
 	case "postgres":
 		dbConn, err := sql.Open("postgres", cfg.DBConnString)
@@ -67,7 +65,7 @@ func main() {
 			log.Fatal(err)
 		}
 		runMigrations(dbConn, "postgres", cfg.DBConnString)
-		authRepo = sql_adapter.NewAuthRepository(dbConn, cfg.JWTSecret)
+		authRepo = sqliteAdapter.NewAuthRepository(dbConn, cfg.JWTSecret)
 
 	case "sqlite":
 		dbConn, err := sql.Open("sqlite", cfg.DBConnString)
@@ -75,7 +73,7 @@ func main() {
 			log.Fatal(err)
 		}
 		runMigrations(dbConn, "sqlite", cfg.DBConnString)
-		authRepo = sql_adapter.NewAuthRepository(dbConn, cfg.JWTSecret)
+		authRepo = sqliteAdapter.NewAuthRepository(dbConn, cfg.JWTSecret)
 
 	case "pocketbase":
 		fallthrough
@@ -83,7 +81,6 @@ func main() {
 		pbApp := db.Init()
 		authRepo = pocketbase.NewAuthRepository(pbApp)
 
-		// Start PocketBase asynchronously
 		go func() {
 			if err := pbApp.Start(); err != nil {
 				log.Fatalf("PocketBase start failed: %v", err)
@@ -91,26 +88,20 @@ func main() {
 		}()
 	}
 
-	// 3. Initialize UseCases (Business Logic)
-	authUseCase := usecase_auth.NewAuthUseCase(authRepo)
+	authUseCase := usecase.NewAuthUseCase(authRepo)
 
-	// 4. Initialize Fiber app
 	app := fiber.New()
 
-	// 5. Setup REST Routes (Delivery)
 	authHandler := rest.NewAuthHandler(authUseCase)
 	authHandler.SetupRoutes(app)
 
-	// 6. Setup GraphQL Routes (Delivery)
 	graphql.SetupRoutes(app)
 
-	// 7. Mount PocketBase Admin UI and Core API via Proxy (only applies if pb wrapper is reachable)
 	if cfg.DBType == "pocketbase" {
 		app.All("/_/*", proxy.Forward("http://127.0.0.1:8090/_/"))
 		app.All("/api/*", proxy.Forward("http://localhost:8090/api/"))
 	}
 
-	// 8. Start Fiber Server
 	log.Printf("Starting Fiber Server on :%s", cfg.Port)
 	if err := app.Listen(":" + cfg.Port); err != nil {
 		log.Fatalf("Fiber server failed: %v", err)

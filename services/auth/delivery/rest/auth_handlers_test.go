@@ -10,10 +10,9 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
-	"boilerplate/internal/domain"
+	"boilerplate/services/auth/domain"
 )
 
-// Mock UseCase for Testing
 type mockAuthUseCase struct {
 	signupFn        func(ctx context.Context, username, password string) (*domain.User, error)
 	loginFn         func(ctx context.Context, username, password string) (string, error)

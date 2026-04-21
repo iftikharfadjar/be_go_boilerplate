@@ -1,4 +1,4 @@
-package sql_adapter
+package sql
 
 import (
 	"context"
@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"boilerplate/internal/domain"
-	"boilerplate/internal/repository/sqlc"
-	"boilerplate/pkg/jwt"
+	"boilerplate/services/auth/domain"
+	"boilerplate/shared/adapter/sqlite_adapter/sqlc"
+	"boilerplate/shared/jwt"
 )
 
 type authRepository struct {
@@ -64,7 +64,7 @@ func (r *authRepository) Signup(ctx context.Context, username, password string) 
 		PasswordHash: string(hashedPassword),
 	})
 	if err != nil {
-		return nil, err // e.g. UNIQUE constraint failed
+		return nil, err
 	}
 
 	return &domain.User{
@@ -79,8 +79,6 @@ func (r *authRepository) ValidateToken(ctx context.Context, token string) (*doma
 		return nil, err
 	}
 
-	// We could optionally query the DB here to ensure the user still exists or isn't deactivated.
-	// For now, if the JWT signature naturally validates, we trust it to keep boilerplate fast.
 	return &domain.User{
 		ID:       userID,
 		Username: username,

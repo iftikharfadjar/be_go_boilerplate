@@ -2,10 +2,10 @@ package rest
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"boilerplate/internal/domain"
+	"boilerplate/services/auth/domain"
 )
 
-type AuthHandler struct{
+type AuthHandler struct {
 	uc domain.AuthUseCase
 }
 

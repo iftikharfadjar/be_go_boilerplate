@@ -27,7 +27,6 @@ func LoadConfig() *Config {
 		log.Println("config.json not found, relying purely on environment variables")
 	}
 
-	// Fallback to environment variables if keys are missing
 	if cfg.DBType == "" {
 		cfg.DBType = os.Getenv("DB_TYPE")
 	}
@@ -41,7 +40,6 @@ func LoadConfig() *Config {
 		cfg.JWTSecret = os.Getenv("JWT_SECRET")
 	}
 
-	// Provide sensible defaults if completely empty
 	if cfg.DBType == "" {
 		cfg.DBType = "pocketbase"
 	}

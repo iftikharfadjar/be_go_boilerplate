@@ -6,4 +6,4 @@ sql:
     gen:
       go:
         package: "sqlc"
-        out: "internal/repository/sqlc"
+        out: "shared/adapter/sqlite_adapter/sqlc"

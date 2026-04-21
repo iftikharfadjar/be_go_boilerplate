@@ -1,13 +1,12 @@
-package auth
+package middleware
 
 import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	"boilerplate/internal/domain"
+	"boilerplate/services/auth/domain"
 )
 
-// Middleware validates the Authorization header using the Clean AuthUseCase
 func Middleware(uc domain.AuthUseCase) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
@@ -26,7 +25,6 @@ func Middleware(uc domain.AuthUseCase) fiber.Handler {
 
 		token := parts[1]
 
-		// Use Domain layer to validate the token, remaining agnostic to PocketBase.
 		user, err := uc.ValidateToken(c.Context(), token)
 		if err != nil || user == nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -34,7 +32,6 @@ func Middleware(uc domain.AuthUseCase) fiber.Handler {
 			})
 		}
 
-		// Store domain.User in context
 		c.Locals("user", user)
 
 		return c.Next()

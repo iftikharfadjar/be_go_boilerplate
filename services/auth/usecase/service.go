@@ -1,9 +1,9 @@
-package auth
+package usecase
 
 import (
 	"context"
 
-	"boilerplate/internal/domain"
+	"boilerplate/services/auth/domain"
 )
 
 type useCase struct {
@@ -15,13 +15,11 @@ func NewAuthUseCase(repo domain.AuthRepository) domain.AuthUseCase {
 }
 
 func (u *useCase) Login(ctx context.Context, username, password string) (string, error) {
-	// Business validation logic can go here
 	_, token, err := u.repo.Login(ctx, username, password)
 	return token, err
 }
 
 func (u *useCase) Signup(ctx context.Context, username, password string) (*domain.User, error) {
-	// e.g. Check password strength, clean username, etc.
 	return u.repo.Signup(ctx, username, password)
 }
 
