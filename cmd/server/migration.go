@@ -26,7 +26,7 @@ func runMigrations(dbConn *sql.DB, dbType string, connString string) {
 		log.Fatalf("could not instantiate migration driver: %v", err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance("file://sql/migrations", dbType, driver)
+	m, err := migrate.NewWithDatabaseInstance("file://./sql/migrations", dbType, driver)
 	if err != nil {
 		log.Fatalf("migration init failed: %v", err)
 	}
