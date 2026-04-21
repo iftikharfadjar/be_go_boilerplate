@@ -41,7 +41,7 @@ func LoadConfig() *Config {
 	}
 
 	if cfg.DBType == "" {
-		cfg.DBType = "pocketbase"
+		cfg.DBType = "sqlite"
 	}
 	if cfg.Port == "" {
 		cfg.Port = "3000"
@@ -49,3 +49,4 @@ func LoadConfig() *Config {
 
 	return cfg
 }
+
