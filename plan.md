@@ -4,7 +4,7 @@
 A Go-based backend boilerplate utilizing **Fiber v3** as the primary web framework, integrating a highly decoupled **Clean Architecture / Ports & Adapters** footprint. The architecture gracefully supports multiple database adapters dynamically at run-time (**PocketBase**, **SQLite**, **PostgreSQL**) and exposes API connectivity via both **REST** and **GraphQL** endpoints.
 
 ## 2. Architecture & Design Principles
-- **Clean Architecture:** The system strictly separates business logic from technical frameworks. The pure entities (`domain/`) and application business logic (`usecase/`) have absolutely no knowledge of Fiber, PocketBase, SQL, or GraphQL.
+- **Clean Architecture:** The system strictly separates business logic from technical frameworks. The pure entities (`services/auth/domain/`) and application business logic (`services/auth/usecase/`) have absolutely no knowledge of Fiber, PocketBase, SQL, or GraphQL.
 - **Dynamic Database Swapping:** By enforcing the `domain.AuthRepository` interface, the boilerplate supports reading a `config.json` file at boot to gracefully inject either PocketBase, a raw `database/sql` SQLite instance, or a PostgreSQL instance.
 - **sqlc Integration:** Raw SQL queries are written natively in `sql/` and strongly typed via `sqlc generate`. The auto-generated code serves as the core mapping foundation for both the SQLite and PostgreSQL backend adapters.
 - **Golang Migrations:** The boilerplate launches automated schema verifications targeting `sql/migrations` upon start-up, shielding structural inconsistencies across environments.
@@ -12,37 +12,37 @@ A Go-based backend boilerplate utilizing **Fiber v3** as the primary web framewo
 
 ## 3. Project Structure
 ```text
-/
-├── cmd/
-│   └── server/
-│       └── main.go                 # App wireup / Config Loading / Database Migrations
-├── sql/
-│   ├── migrations/                 # Automated .sql database lifecycle files
-│   ├── query.sql                   # Raw parameterized SQLite/Postgres commands
-│   └── schema.sql                  # Table topologies
-├── internal/
-│   ├── auth/                       # Fiber middleware parsing HTTP Bearer tokens
-│   ├── db/                         # PocketBase/Raw SQL initialization core
-│   ├── domain/                     # Pure Go structs (User) and abstraction interfaces
-│   ├── repository/
-│   │   ├── pocketbase/             # PocketBase SDK adapter
-│   │   ├── sql_adapter/            # Generic auto-adapter mapping SQLC structs to pure Domain entities
-│   │   └── sqlc/                   # Type-safe auto-generated SQL mappings (DO NOT EDIT)
-│   ├── usecase/auth/               # Pure business orchestrator (DB agnostic)
-│   ├── rest/                       # Fiber delivery adapter & Endpoints
-│   └── graphql/                    # gqlgen delivery adapter
-├── pkg/
-│   ├── config/                     # Dynamic config.json + os.Getenv loader
-│   └── jwt/                        # lestrrat-go/jwx/v3 native token signer and verifier
-├── go.mod
-├── sqlc.yaml                       # SQL Code-generation configurations
-└── config.json                     # Environment definitions
+cmd/server/main.go                 # App wireup / Config Loading
+
+services/                        # Feature-based modules
+├── auth/
+│   ├── domain/                  # Pure Go structs (User) and abstraction interfaces
+│   ├── usecase/                 # Pure business orchestrator (DB agnostic)
+│   └── delivery/
+│       ├── rest/               # Fiber delivery adapter & Endpoints
+│       └── graphql/            # gqlgen delivery adapter
+
+shared/                          # Cross-cutting concerns
+├── config/                      # Dynamic config.json + os.Getenv loader
+├── jwt/                         # lestrrat-go/jwx/v3 native token signer and verifier
+├── middleware/                 # Fiber middleware parsing HTTP Bearer tokens
+├── db/                         # PocketBase initialization core
+└── adapter/                    # DB Adapters
+    ├── pocketbase/            # PocketBase SDK adapter
+    └── sqlite_adapter/
+        └── sqlc/              # Type-safe auto-generated SQL mappings (DO NOT EDIT)
+
+graph/                          # GraphQL schema + generated code
+sql/                           # migrations, schema.sql, query.sql
+go.mod
+sqlc.yaml                       # SQL code-generation configurations
+config.json                     # Environment definitions
 ```
 
 ## 4. Key Components
 
 ### A. Configuration Management
-- Loaded dynamically using `pkg/config`. It prioritizes `config.json` natively before failing over to standard Environment Variables. 
+- Loaded dynamically using `shared/config`. It prioritizes `config.json` natively before falling over to standard Environment Variables.
 
 ### B. Database Integrations
 **SQL-based Adapters:**
@@ -54,15 +54,15 @@ A Go-based backend boilerplate utilizing **Fiber v3** as the primary web framewo
 
 ### C. Web Interfaces
 **Fiber REST API Endpoints:**
-- Standard payloads are unmarshalled inside `internal/rest` controllers mapping gracefully to UseCases.
+- Standard payloads are unmarshalled inside `services/auth/delivery/rest` controllers mapping gracefully to UseCases.
 - Endpoints: `POST /api/v1/signup`, `POST /api/v1/login`, `POST /api/v1/logout`
 
 **GraphQL:**
 - Leverages `github.com/99designs/gqlgen`. Resolvers natively utilize `domain.AuthUseCase` independently of Fiber architectures.
 
 ### D. Security & Lifecycle
-- Handled primarily by `pkg/jwt`.
-- Intercepted by Fiber's `auth.Middleware(...)` parsing `Authorization` headers. If validated securely by the `jwx` engine, the inner `*domain.User` entity resolves successfully and is tightly bound to Context Locals.
+- Handled primarily by `shared/jwt`.
+- Intercepted by Fiber's `middleware.Middleware(...)` parsing `Authorization` headers. If validated securely by the `jwx` engine, the inner `*domain.User` entity resolves successfully and is tightly bound to Context Locals.
 
 ## 5. Current Implementation State
 - **[COMPLETED]** Defined pure structural Domain logic.
